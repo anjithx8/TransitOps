@@ -4,7 +4,7 @@ import Dashboard from './pages/Dashboard'
 import Vehicles from './pages/Vehicles'
 import Drivers from './pages/Drivers'
 import Trips from './pages/Trips'
-import Maintenance from './pages/Maintainance'
+import Maintenance from './pages/Maintenance'
 import FuelExpenses from './pages/FuelExpenses'
 
 function App() {
