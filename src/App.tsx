@@ -5,6 +5,7 @@ import { colors } from './lib/theme'
 
 import Home from './pages/Home'
 import Login from './pages/Login'
+import ProtectedRoute from './components/ProtectedRoute'
 import Account from './pages/Account'
 import Dashboard from './pages/Dashboard'
 import Vehicles from './pages/Vehicles'
@@ -134,13 +135,13 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/account" element={<Account />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/vehicles" element={<Vehicles />} />
-        <Route path="/drivers" element={<Drivers />} />
-        <Route path="/trips" element={<Trips />} />
-        <Route path="/maintenance" element={<Maintenance />} />
-        <Route path="/fuel-expenses" element={<FuelExpenses />} />
-        <Route path="/reports" element={<Reports />} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/vehicles" element={<ProtectedRoute><Vehicles /></ProtectedRoute>} />
+        <Route path="/drivers" element={<ProtectedRoute><Drivers /></ProtectedRoute>} />
+        <Route path="/trips" element={<ProtectedRoute><Trips /></ProtectedRoute>} />
+        <Route path="/maintenance" element={<ProtectedRoute><Maintenance /></ProtectedRoute>} />
+        <Route path="/fuel-expenses" element={<ProtectedRoute><FuelExpenses /></ProtectedRoute>} />
+        <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   )
