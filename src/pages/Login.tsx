@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { colors, page, card, input,select as selectStyle, button, label, errorText } from '../lib/theme'
+import { colors, page, card, input, select as selectStyle, button, label, errorText } from '../lib/theme'
 
 export default function Login() {
   const [isSignup, setIsSignup] = useState(false)
@@ -13,6 +13,13 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
+  // If already logged in, don't show the login form at all — bounce to Account
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) navigate('/account')
+    })
+  }, [navigate])
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -20,7 +27,7 @@ export default function Login() {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setLoading(false)
     if (error) { setError(error.message); return }
-    navigate('/dashboard')
+    navigate('/account')
   }
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -37,7 +44,7 @@ export default function Login() {
       setError(error.message || JSON.stringify(error))
       return
     }
-    navigate('/dashboard')
+    navigate('/account')
   }
 
   const fullWidthInput = { ...input, width: '100%', boxSizing: 'border-box' as const, marginRight: 0, marginBottom: '0.75rem' }
