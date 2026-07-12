@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
+import Home from './pages/Home'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Vehicles from './pages/Vehicles'
@@ -23,6 +24,7 @@ function App() {
         display: 'flex', gap: '1.5rem', padding: '1rem 2rem',
         backgroundColor: colors.surface, borderBottom: `1px solid ${colors.border}`,
       }}>
+        <Link to="/">Home</Link>
         <Link to="/login" style={navLinkStyle}>Login</Link>
         <Link to="/dashboard" style={navLinkStyle}>Dashboard</Link>
         <Link to="/vehicles" style={navLinkStyle}>Vehicles</Link>
@@ -33,6 +35,7 @@ function App() {
         <Link to="/reports" style={navLinkStyle}>Reports</Link>
       </nav>
       <Routes>
+        <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/vehicles" element={<Vehicles />} />
