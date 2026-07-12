@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { page, heading, card, input, select as selectStyle, button, table, th, td, errorText } from '../lib/theme'
 
 type Driver = {
   id: string
@@ -40,35 +41,57 @@ export default function Drivers() {
     fetchDrivers()
   }
 
+  const handleStatusChange = async (driverId: string, newStatus: string) => {
+    setError('')
+    const { error } = await supabase.from('drivers').update({ status: newStatus }).eq('id', driverId)
+    if (error) setError(error.message)
+    else fetchDrivers()
+  }
+
   return (
-    <div>
-      <h1>Drivers</h1>
+    <div style={page}>
+      <h1 style={heading}>Drivers</h1>
 
-      <form onSubmit={handleSubmit}>
-        <input placeholder="Name" value={form.name}
-          onChange={e => setForm({ ...form, name: e.target.value })} required />
-        <input placeholder="License Number" value={form.license_number}
-          onChange={e => setForm({ ...form, license_number: e.target.value })} required />
-        <input placeholder="License Category" value={form.license_category}
-          onChange={e => setForm({ ...form, license_category: e.target.value })} />
-        <input placeholder="License Expiry" type="date" value={form.license_expiry_date}
-          onChange={e => setForm({ ...form, license_expiry_date: e.target.value })} required />
-        <input placeholder="Contact Number" value={form.contact_number}
-          onChange={e => setForm({ ...form, contact_number: e.target.value })} />
-        <button type="submit">Add Driver</button>
-      </form>
+      <div style={card}>
+        <form onSubmit={handleSubmit}>
+          <input style={input} placeholder="Name" value={form.name}
+            onChange={e => setForm({ ...form, name: e.target.value })} required />
+          <input style={input} placeholder="License Number" value={form.license_number}
+            onChange={e => setForm({ ...form, license_number: e.target.value })} required />
+          <input style={input} placeholder="License Category" value={form.license_category}
+            onChange={e => setForm({ ...form, license_category: e.target.value })} />
+          <input style={input} placeholder="License Expiry" type="date" value={form.license_expiry_date}
+            onChange={e => setForm({ ...form, license_expiry_date: e.target.value })} required />
+          <input style={input} placeholder="Contact Number" value={form.contact_number}
+            onChange={e => setForm({ ...form, contact_number: e.target.value })} />
+          <button type="submit" style={button}>Add Driver</button>
+        </form>
+      </div>
 
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {error && <p style={errorText}>{error}</p>}
 
-      <table>
+      <table style={table}>
         <thead>
-          <tr><th>Name</th><th>License #</th><th>Category</th><th>Expiry</th><th>Status</th></tr>
+          <tr>
+            <th style={th}>Name</th><th style={th}>License #</th><th style={th}>Category</th>
+            <th style={th}>Expiry</th><th style={th}>Status</th>
+          </tr>
         </thead>
         <tbody>
           {drivers.map(d => (
             <tr key={d.id}>
-              <td>{d.name}</td><td>{d.license_number}</td><td>{d.license_category}</td>
-              <td>{d.license_expiry_date}</td><td>{d.status}</td>
+              <td style={td}>{d.name}</td>
+              <td style={td}>{d.license_number}</td>
+              <td style={td}>{d.license_category}</td>
+              <td style={td}>{d.license_expiry_date}</td>
+              <td style={td}>
+                <select style={selectStyle} value={d.status} onChange={e => handleStatusChange(d.id, e.target.value)}>
+                  <option value="available">available</option>
+                  <option value="on_trip">on_trip</option>
+                  <option value="off_duty">off_duty</option>
+                  <option value="suspended">suspended</option>
+                </select>
+              </td>
             </tr>
           ))}
         </tbody>

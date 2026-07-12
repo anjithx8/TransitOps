@@ -7,19 +7,30 @@ import Trips from './pages/Trips'
 import Maintenance from './pages/Maintenance'
 import FuelExpenses from './pages/FuelExpenses'
 import Reports from './pages/Reports'
+import { colors } from './lib/theme'
 
 function App() {
+  const navLinkStyle = {
+    color: colors.textMuted,
+    textDecoration: 'none',
+    fontSize: '0.875rem',
+    fontWeight: 500,
+  }
+
   return (
     <BrowserRouter>
-      <nav style={{ display: 'flex', gap: '1rem', padding: '1rem' }}>
-        <Link to="/login">Login</Link>
-        <Link to="/dashboard">Dashboard</Link>
-        <Link to="/vehicles">Vehicles</Link>
-        <Link to="/drivers">Drivers</Link>
-        <Link to="/trips">Trips</Link>
-        <Link to="/maintenance">Maintenance</Link>
-        <Link to="/fuel-expenses">Fuel & Expenses</Link>
-        <Link to="/reports">Reports</Link>
+      <nav style={{
+        display: 'flex', gap: '1.5rem', padding: '1rem 2rem',
+        backgroundColor: colors.surface, borderBottom: `1px solid ${colors.border}`,
+      }}>
+        <Link to="/login" style={navLinkStyle}>Login</Link>
+        <Link to="/dashboard" style={navLinkStyle}>Dashboard</Link>
+        <Link to="/vehicles" style={navLinkStyle}>Vehicles</Link>
+        <Link to="/drivers" style={navLinkStyle}>Drivers</Link>
+        <Link to="/trips" style={navLinkStyle}>Trips</Link>
+        <Link to="/maintenance" style={navLinkStyle}>Maintenance</Link>
+        <Link to="/fuel-expenses" style={navLinkStyle}>Fuel & Expenses</Link>
+        <Link to="/reports" style={navLinkStyle}>Reports</Link>
       </nav>
       <Routes>
         <Route path="/login" element={<Login />} />

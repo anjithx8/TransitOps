@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { colors, page, heading, card, button } from '../lib/theme'
 
 export default function Dashboard() {
   const [kpis, setKpis] = useState({
@@ -32,15 +33,7 @@ export default function Dashboard() {
 
     const fleetUtilization = activeVehicles > 0 ? Math.round((onTripVehicles / activeVehicles) * 100) : 0
 
-    setKpis({
-      activeVehicles,
-      availableVehicles,
-      inMaintenance,
-      activeTrips,
-      pendingTrips,
-      driversOnDuty,
-      fleetUtilization,
-    })
+    setKpis({ activeVehicles, availableVehicles, inMaintenance, activeTrips, pendingTrips, driversOnDuty, fleetUtilization })
     setLoading(false)
   }
 
@@ -57,21 +50,25 @@ export default function Dashboard() {
   ]
 
   return (
-    <div style={{ padding: '1.5rem' }}>
-      <h1>Dashboard</h1>
+    <div style={page}>
+      <h1 style={heading}>Dashboard</h1>
+
       {loading ? (
-        <p>Loading live data...</p>
+        <p style={{ color: colors.textMuted }}>Loading live data...</p>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
           {kpiCards.map(k => (
-            <div key={k.label} style={{ border: '1px solid #444', borderRadius: '8px', padding: '1rem' }}>
-              <div style={{ fontSize: '0.875rem', color: '#999' }}>{k.label}</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{k.value}</div>
+            <div key={k.label} style={card}>
+              <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.05em', color: colors.textMuted, marginBottom: '0.5rem' }}>
+                {k.label}
+              </div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 700, color: colors.text }}>{k.value}</div>
             </div>
           ))}
         </div>
       )}
-      <button onClick={fetchKpis} style={{ marginTop: '1rem' }}>Refresh</button>
+
+      <button onClick={fetchKpis} style={{ ...button, marginTop: '1rem' }}>Refresh</button>
     </div>
   )
 }

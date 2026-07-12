@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { colors, page, heading, card, input, select as selectStyle, button, table, th, td, errorText } from '../lib/theme'
 
 type Vehicle = {
   id: string
@@ -31,6 +32,16 @@ type Trip = {
   drivers?: { name: string }
 }
 
+const secondaryButton = {
+  ...button,
+  backgroundColor: 'transparent',
+  border: `1px solid ${colors.border}`,
+  color: colors.textMuted,
+  marginLeft: '0.5rem',
+}
+
+const smallInput = { ...input, width: '110px', marginRight: '0.5rem' }
+
 export default function Trips() {
   const [trips, setTrips] = useState<Trip[]>([])
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
@@ -40,8 +51,6 @@ export default function Trips() {
     source: '', destination: '', vehicle_id: '', driver_id: '',
     cargo_weight: '', planned_distance: ''
   })
-
-  // completion inputs, keyed by trip id
   const [completionInputs, setCompletionInputs] = useState<Record<string, { odometer: string; fuel: string }>>({})
 
   const fetchAll = async () => {
@@ -52,34 +61,23 @@ export default function Trips() {
     if (tripsErr) setError(tripsErr.message)
     else setTrips(tripsData as any)
 
-    // Only vehicles genuinely eligible for new trip assignment
-    const { data: vehicleData } = await supabase
-      .from('vehicles')
-      .select('*')
-      .eq('status', 'available')
+    const { data: vehicleData } = await supabase.from('vehicles').select('*').eq('status', 'available')
     setVehicles(vehicleData || [])
 
-    // Only drivers who are available AND not license-expired
     const today = new Date().toISOString().split('T')[0]
     const { data: driverData } = await supabase
-      .from('drivers')
-      .select('*')
-      .eq('status', 'available')
-      .gt('license_expiry_date', today)
+      .from('drivers').select('*').eq('status', 'available').gt('license_expiry_date', today)
     setDrivers(driverData || [])
   }
 
   useEffect(() => { fetchAll() }, [])
 
-  // ---------- Create Trip (Draft) ----------
   const handleCreateTrip = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-
     const vehicle = vehicles.find(v => v.id === form.vehicle_id)
     const cargoWeight = Number(form.cargo_weight)
 
-    // Rule: cargo weight must not exceed vehicle max load capacity
     if (vehicle && cargoWeight > vehicle.max_load_capacity) {
       setError(`Cargo weight (${cargoWeight}kg) exceeds vehicle capacity (${vehicle.max_load_capacity}kg)`)
       return
@@ -100,56 +98,30 @@ export default function Trips() {
     fetchAll()
   }
 
-  // ---------- Dispatch Trip ----------
   const handleDispatch = async (trip: Trip) => {
     setError('')
-
-    // Re-fetch current vehicle & driver state to guard against stale data
     const { data: vehicle } = await supabase.from('vehicles').select('*').eq('id', trip.vehicle_id).single()
     const { data: driver } = await supabase.from('drivers').select('*').eq('id', trip.driver_id).single()
 
-    if (!vehicle || vehicle.status !== 'available') {
-      setError('Vehicle is no longer available for dispatch.')
-      fetchAll()
-      return
-    }
-    if (!driver || driver.status !== 'available') {
-      setError('Driver is no longer available for dispatch.')
-      fetchAll()
-      return
-    }
+    if (!vehicle || vehicle.status !== 'available') { setError('Vehicle is no longer available for dispatch.'); fetchAll(); return }
+    if (!driver || driver.status !== 'available') { setError('Driver is no longer available for dispatch.'); fetchAll(); return }
     const today = new Date().toISOString().split('T')[0]
-    if (driver.license_expiry_date <= today) {
-      setError('Driver license has expired — cannot dispatch.')
-      fetchAll()
-      return
-    }
-    if (trip.cargo_weight > vehicle.max_load_capacity) {
-      setError('Cargo weight exceeds vehicle capacity — cannot dispatch.')
-      return
-    }
+    if (driver.license_expiry_date <= today) { setError('Driver license has expired — cannot dispatch.'); fetchAll(); return }
+    if (trip.cargo_weight > vehicle.max_load_capacity) { setError('Cargo weight exceeds vehicle capacity — cannot dispatch.'); return }
 
-    // All checks passed — perform the three linked updates
     const { error: tripErr } = await supabase
-      .from('trips')
-      .update({ status: 'dispatched', dispatched_at: new Date().toISOString() })
-      .eq('id', trip.id)
+      .from('trips').update({ status: 'dispatched', dispatched_at: new Date().toISOString() }).eq('id', trip.id)
     if (tripErr) { setError(tripErr.message); return }
 
     await supabase.from('vehicles').update({ status: 'on_trip' }).eq('id', trip.vehicle_id)
     await supabase.from('drivers').update({ status: 'on_trip' }).eq('id', trip.driver_id)
-
     fetchAll()
   }
 
-  // ---------- Complete Trip ----------
   const handleComplete = async (trip: Trip) => {
     setError('')
     const inputs = completionInputs[trip.id]
-    if (!inputs?.odometer || !inputs?.fuel) {
-      setError('Enter final odometer and fuel consumed before completing.')
-      return
-    }
+    if (!inputs?.odometer || !inputs?.fuel) { setError('Enter final odometer and fuel consumed before completing.'); return }
 
     const { error: tripErr } = await supabase
       .from('trips')
@@ -162,115 +134,91 @@ export default function Trips() {
       .eq('id', trip.id)
     if (tripErr) { setError(tripErr.message); return }
 
-    // Vehicle and driver both revert to available
-    await supabase.from('vehicles').update({
-      status: 'available',
-      odometer: Number(inputs.odometer),
-    }).eq('id', trip.vehicle_id)
+    await supabase.from('vehicles').update({ status: 'available', odometer: Number(inputs.odometer) }).eq('id', trip.vehicle_id)
     await supabase.from('drivers').update({ status: 'available' }).eq('id', trip.driver_id)
-
     fetchAll()
   }
 
-  // ---------- Cancel Trip ----------
   const handleCancel = async (trip: Trip) => {
     setError('')
     const { error: tripErr } = await supabase.from('trips').update({ status: 'cancelled' }).eq('id', trip.id)
     if (tripErr) { setError(tripErr.message); return }
 
-    // Only restore vehicle/driver if trip was already dispatched (had locked them)
     if (trip.status === 'dispatched') {
       await supabase.from('vehicles').update({ status: 'available' }).eq('id', trip.vehicle_id)
       await supabase.from('drivers').update({ status: 'available' }).eq('id', trip.driver_id)
     }
-
     fetchAll()
   }
 
   return (
-    <div style={{ padding: '1.5rem' }}>
-      <h1>Trips</h1>
+    <div style={page}>
+      <h1 style={heading}>Trips</h1>
 
-      <form onSubmit={handleCreateTrip} style={{ marginBottom: '1rem' }}>
-        <input placeholder="Source" value={form.source}
-          onChange={e => setForm({ ...form, source: e.target.value })} required />
-        <input placeholder="Destination" value={form.destination}
-          onChange={e => setForm({ ...form, destination: e.target.value })} required />
+      <div style={card}>
+        <form onSubmit={handleCreateTrip}>
+          <input style={input} placeholder="Source" value={form.source}
+            onChange={e => setForm({ ...form, source: e.target.value })} required />
+          <input style={input} placeholder="Destination" value={form.destination}
+            onChange={e => setForm({ ...form, destination: e.target.value })} required />
 
-        <select value={form.vehicle_id} onChange={e => setForm({ ...form, vehicle_id: e.target.value })} required>
-          <option value="">Select Vehicle</option>
-          {vehicles.map(v => (
-            <option key={v.id} value={v.id}>
-              {v.registration_number} — {v.name} (max {v.max_load_capacity}kg)
-            </option>
-          ))}
-        </select>
+          <select style={selectStyle} value={form.vehicle_id} onChange={e => setForm({ ...form, vehicle_id: e.target.value })} required>
+            <option value="">Select Vehicle</option>
+            {vehicles.map(v => (
+              <option key={v.id} value={v.id}>{v.registration_number} — {v.name} (max {v.max_load_capacity}kg)</option>
+            ))}
+          </select>
 
-        <select value={form.driver_id} onChange={e => setForm({ ...form, driver_id: e.target.value })} required>
-          <option value="">Select Driver</option>
-          {drivers.map(d => (
-            <option key={d.id} value={d.id}>{d.name}</option>
-          ))}
-        </select>
+          <select style={selectStyle} value={form.driver_id} onChange={e => setForm({ ...form, driver_id: e.target.value })} required>
+            <option value="">Select Driver</option>
+            {drivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </select>
 
-        <input placeholder="Cargo Weight (kg)" type="number" value={form.cargo_weight}
-          onChange={e => setForm({ ...form, cargo_weight: e.target.value })} required />
-        <input placeholder="Planned Distance (km)" type="number" value={form.planned_distance}
-          onChange={e => setForm({ ...form, planned_distance: e.target.value })} />
+          <input style={input} placeholder="Cargo Weight (kg)" type="number" value={form.cargo_weight}
+            onChange={e => setForm({ ...form, cargo_weight: e.target.value })} required />
+          <input style={input} placeholder="Planned Distance (km)" type="number" value={form.planned_distance}
+            onChange={e => setForm({ ...form, planned_distance: e.target.value })} />
 
-        <button type="submit">Create Trip (Draft)</button>
-      </form>
+          <button type="submit" style={button}>Create Trip (Draft)</button>
+        </form>
+      </div>
 
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {error && <p style={errorText}>{error}</p>}
 
-      <table border={1} cellPadding={6}>
+      <table style={table}>
         <thead>
           <tr>
-            <th>Source</th><th>Destination</th><th>Vehicle</th><th>Driver</th>
-            <th>Cargo</th><th>Status</th><th>Actions</th>
+            <th style={th}>Source</th><th style={th}>Destination</th><th style={th}>Vehicle</th>
+            <th style={th}>Driver</th><th style={th}>Cargo</th><th style={th}>Status</th><th style={th}>Actions</th>
           </tr>
         </thead>
         <tbody>
           {trips.map(t => (
             <tr key={t.id}>
-              <td>{t.source}</td>
-              <td>{t.destination}</td>
-              <td>{t.vehicles?.registration_number}</td>
-              <td>{t.drivers?.name}</td>
-              <td>{t.cargo_weight}kg</td>
-              <td>{t.status}</td>
-              <td>
+              <td style={td}>{t.source}</td>
+              <td style={td}>{t.destination}</td>
+              <td style={td}>{t.vehicles?.registration_number}</td>
+              <td style={td}>{t.drivers?.name}</td>
+              <td style={td}>{t.cargo_weight}kg</td>
+              <td style={td}>{t.status}</td>
+              <td style={td}>
                 {t.status === 'draft' && (
                   <>
-                    <button onClick={() => handleDispatch(t)}>Dispatch</button>{' '}
-                    <button onClick={() => handleCancel(t)}>Cancel</button>
+                    <button style={button} onClick={() => handleDispatch(t)}>Dispatch</button>
+                    <button style={secondaryButton} onClick={() => handleCancel(t)}>Cancel</button>
                   </>
                 )}
                 {t.status === 'dispatched' && (
                   <>
-                    <input
-                      placeholder="Final odometer"
-                      type="number"
-                      style={{ width: '110px' }}
-                      onChange={e => setCompletionInputs({
-                        ...completionInputs,
-                        [t.id]: { ...completionInputs[t.id], odometer: e.target.value }
-                      })}
-                    />
-                    <input
-                      placeholder="Fuel used (L)"
-                      type="number"
-                      style={{ width: '100px' }}
-                      onChange={e => setCompletionInputs({
-                        ...completionInputs,
-                        [t.id]: { ...completionInputs[t.id], fuel: e.target.value }
-                      })}
-                    />
-                    <button onClick={() => handleComplete(t)}>Complete</button>{' '}
-                    <button onClick={() => handleCancel(t)}>Cancel</button>
+                    <input style={smallInput} placeholder="Final odometer" type="number"
+                      onChange={e => setCompletionInputs({ ...completionInputs, [t.id]: { ...completionInputs[t.id], odometer: e.target.value } })} />
+                    <input style={smallInput} placeholder="Fuel used (L)" type="number"
+                      onChange={e => setCompletionInputs({ ...completionInputs, [t.id]: { ...completionInputs[t.id], fuel: e.target.value } })} />
+                    <button style={button} onClick={() => handleComplete(t)}>Complete</button>
+                    <button style={secondaryButton} onClick={() => handleCancel(t)}>Cancel</button>
                   </>
                 )}
-                {(t.status === 'completed' || t.status === 'cancelled') && <em>—</em>}
+                {(t.status === 'completed' || t.status === 'cancelled') && <em style={{ color: colors.textFaint }}>—</em>}
               </td>
             </tr>
           ))}

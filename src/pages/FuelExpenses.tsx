@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { colors, page, heading, card, input, select as selectStyle, button, table, th, td, errorText } from '../lib/theme'
 
 type Vehicle = {
   id: string
@@ -25,6 +26,8 @@ type Expense = {
   vehicles?: { registration_number: string; name: string }
 }
 
+const subheading = { fontSize: '1rem', fontWeight: 600, color: colors.text, marginTop: '2rem', marginBottom: '0.75rem' }
+
 export default function FuelExpenses() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [fuelLogs, setFuelLogs] = useState<FuelLog[]>([])
@@ -39,15 +42,11 @@ export default function FuelExpenses() {
     setVehicles(vData || [])
 
     const { data: fData } = await supabase
-      .from('fuel_logs')
-      .select('*, vehicles(registration_number, name)')
-      .order('date', { ascending: false })
+      .from('fuel_logs').select('*, vehicles(registration_number, name)').order('date', { ascending: false })
     setFuelLogs(fData || [])
 
     const { data: eData } = await supabase
-      .from('expenses')
-      .select('*, vehicles(registration_number, name)')
-      .order('date', { ascending: false })
+      .from('expenses').select('*, vehicles(registration_number, name)').order('date', { ascending: false })
     setExpenses(eData || [])
   }
 
@@ -89,111 +88,97 @@ export default function FuelExpenses() {
     fetchAll()
   }
 
-  // Per-vehicle total operational cost = sum of fuel costs + sum of expenses
   const costByVehicle = vehicles.map(v => {
-    const fuelTotal = fuelLogs
-      .filter(f => f.vehicle_id === v.id)
-      .reduce((sum, f) => sum + Number(f.cost), 0)
-    const expenseTotal = expenses
-      .filter(e => e.vehicle_id === v.id)
-      .reduce((sum, e) => sum + Number(e.amount), 0)
-    return {
-      vehicle: v,
-      fuelTotal,
-      expenseTotal,
-      total: fuelTotal + expenseTotal,
-    }
+    const fuelTotal = fuelLogs.filter(f => f.vehicle_id === v.id).reduce((sum, f) => sum + Number(f.cost), 0)
+    const expenseTotal = expenses.filter(e => e.vehicle_id === v.id).reduce((sum, e) => sum + Number(e.amount), 0)
+    return { vehicle: v, fuelTotal, expenseTotal, total: fuelTotal + expenseTotal }
   })
 
   return (
-    <div style={{ padding: '1.5rem' }}>
-      <h1>Fuel & Expenses</h1>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+    <div style={page}>
+      <h1 style={heading}>Fuel & Expenses</h1>
+      {error && <p style={errorText}>{error}</p>}
 
-      <h3>Add Fuel Log</h3>
-      <form onSubmit={handleAddFuel} style={{ marginBottom: '1.5rem' }}>
-        <select value={fuelForm.vehicle_id} onChange={e => setFuelForm({ ...fuelForm, vehicle_id: e.target.value })} required>
-          <option value="">Select Vehicle</option>
-          {vehicles.map(v => (
-            <option key={v.id} value={v.id}>{v.registration_number} — {v.name}</option>
-          ))}
-        </select>
-        <input placeholder="Liters" type="number" value={fuelForm.liters}
-          onChange={e => setFuelForm({ ...fuelForm, liters: e.target.value })} required />
-        <input placeholder="Cost" type="number" value={fuelForm.cost}
-          onChange={e => setFuelForm({ ...fuelForm, cost: e.target.value })} required />
-        <input type="date" value={fuelForm.date}
-          onChange={e => setFuelForm({ ...fuelForm, date: e.target.value })} required />
-        <button type="submit">Add Fuel Log</button>
-      </form>
+      <div style={card}>
+        <h3 style={{ fontSize: '1rem', fontWeight: 600, color: colors.text, marginBottom: '0.75rem' }}>Add Fuel Log</h3>
+        <form onSubmit={handleAddFuel}>
+          <select style={selectStyle} value={fuelForm.vehicle_id} onChange={e => setFuelForm({ ...fuelForm, vehicle_id: e.target.value })} required>
+            <option value="">Select Vehicle</option>
+            {vehicles.map(v => <option key={v.id} value={v.id}>{v.registration_number} — {v.name}</option>)}
+          </select>
+          <input style={input} placeholder="Liters" type="number" value={fuelForm.liters}
+            onChange={e => setFuelForm({ ...fuelForm, liters: e.target.value })} required />
+          <input style={input} placeholder="Cost" type="number" value={fuelForm.cost}
+            onChange={e => setFuelForm({ ...fuelForm, cost: e.target.value })} required />
+          <input style={input} type="date" value={fuelForm.date}
+            onChange={e => setFuelForm({ ...fuelForm, date: e.target.value })} required />
+          <button type="submit" style={button}>Add Fuel Log</button>
+        </form>
+      </div>
 
-      <h3>Fuel Logs</h3>
-      {fuelLogs.length === 0 ? <p>No fuel logs yet</p> : (
-        <table border={1} cellPadding={6}>
-          <thead>
-            <tr><th>Vehicle</th><th>Liters</th><th>Cost</th><th>Date</th></tr>
-          </thead>
+      {fuelLogs.length === 0 ? (
+        <p style={{ color: colors.textMuted }}>No fuel logs yet</p>
+      ) : (
+        <table style={table}>
+          <thead><tr><th style={th}>Vehicle</th><th style={th}>Liters</th><th style={th}>Cost</th><th style={th}>Date</th></tr></thead>
           <tbody>
             {fuelLogs.map(f => (
               <tr key={f.id}>
-                <td>{f.vehicles?.registration_number}</td>
-                <td>{f.liters}</td>
-                <td>{f.cost}</td>
-                <td>{f.date}</td>
+                <td style={td}>{f.vehicles?.registration_number}</td>
+                <td style={td}>{f.liters}</td>
+                <td style={td}>{f.cost}</td>
+                <td style={td}>{f.date}</td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
 
-      <h3 style={{ marginTop: '2rem' }}>Add Expense</h3>
-      <form onSubmit={handleAddExpense} style={{ marginBottom: '1.5rem' }}>
-        <select value={expenseForm.vehicle_id} onChange={e => setExpenseForm({ ...expenseForm, vehicle_id: e.target.value })} required>
-          <option value="">Select Vehicle</option>
-          {vehicles.map(v => (
-            <option key={v.id} value={v.id}>{v.registration_number} — {v.name}</option>
-          ))}
-        </select>
-        <input placeholder="Type (e.g. toll, repair)" value={expenseForm.type}
-          onChange={e => setExpenseForm({ ...expenseForm, type: e.target.value })} required />
-        <input placeholder="Amount" type="number" value={expenseForm.amount}
-          onChange={e => setExpenseForm({ ...expenseForm, amount: e.target.value })} required />
-        <input type="date" value={expenseForm.date}
-          onChange={e => setExpenseForm({ ...expenseForm, date: e.target.value })} required />
-        <button type="submit">Add Expense</button>
-      </form>
+      <h3 style={subheading}>Add Expense</h3>
+      <div style={card}>
+        <form onSubmit={handleAddExpense}>
+          <select style={selectStyle} value={expenseForm.vehicle_id} onChange={e => setExpenseForm({ ...expenseForm, vehicle_id: e.target.value })} required>
+            <option value="">Select Vehicle</option>
+            {vehicles.map(v => <option key={v.id} value={v.id}>{v.registration_number} — {v.name}</option>)}
+          </select>
+          <input style={input} placeholder="Type (e.g. toll, repair)" value={expenseForm.type}
+            onChange={e => setExpenseForm({ ...expenseForm, type: e.target.value })} required />
+          <input style={input} placeholder="Amount" type="number" value={expenseForm.amount}
+            onChange={e => setExpenseForm({ ...expenseForm, amount: e.target.value })} required />
+          <input style={input} type="date" value={expenseForm.date}
+            onChange={e => setExpenseForm({ ...expenseForm, date: e.target.value })} required />
+          <button type="submit" style={button}>Add Expense</button>
+        </form>
+      </div>
 
-      <h3>Expenses</h3>
-      {expenses.length === 0 ? <p>No expenses yet</p> : (
-        <table border={1} cellPadding={6}>
-          <thead>
-            <tr><th>Vehicle</th><th>Type</th><th>Amount</th><th>Date</th></tr>
-          </thead>
+      {expenses.length === 0 ? (
+        <p style={{ color: colors.textMuted }}>No expenses yet</p>
+      ) : (
+        <table style={table}>
+          <thead><tr><th style={th}>Vehicle</th><th style={th}>Type</th><th style={th}>Amount</th><th style={th}>Date</th></tr></thead>
           <tbody>
             {expenses.map(e => (
               <tr key={e.id}>
-                <td>{e.vehicles?.registration_number}</td>
-                <td>{e.type}</td>
-                <td>{e.amount}</td>
-                <td>{e.date}</td>
+                <td style={td}>{e.vehicles?.registration_number}</td>
+                <td style={td}>{e.type}</td>
+                <td style={td}>{e.amount}</td>
+                <td style={td}>{e.date}</td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
 
-      <h3 style={{ marginTop: '2rem' }}>Total Operational Cost per Vehicle</h3>
-      <table border={1} cellPadding={6}>
-        <thead>
-          <tr><th>Vehicle</th><th>Fuel Cost</th><th>Other Expenses</th><th>Total</th></tr>
-        </thead>
+      <h3 style={subheading}>Total Operational Cost per Vehicle</h3>
+      <table style={table}>
+        <thead><tr><th style={th}>Vehicle</th><th style={th}>Fuel Cost</th><th style={th}>Other Expenses</th><th style={th}>Total</th></tr></thead>
         <tbody>
           {costByVehicle.map(c => (
             <tr key={c.vehicle.id}>
-              <td>{c.vehicle.registration_number} — {c.vehicle.name}</td>
-              <td>{c.fuelTotal.toFixed(2)}</td>
-              <td>{c.expenseTotal.toFixed(2)}</td>
-              <td><strong>{c.total.toFixed(2)}</strong></td>
+              <td style={td}>{c.vehicle.registration_number} — {c.vehicle.name}</td>
+              <td style={td}>{c.fuelTotal.toFixed(2)}</td>
+              <td style={td}>{c.expenseTotal.toFixed(2)}</td>
+              <td style={{ ...td, fontWeight: 700, color: colors.accent }}>{c.total.toFixed(2)}</td>
             </tr>
           ))}
         </tbody>

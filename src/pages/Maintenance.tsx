@@ -1,6 +1,6 @@
-
 import { useEffect, useState } from "react"
 import { supabase } from "../lib/supabase"
+import { colors, page, heading, card, select as selectStyle, button, table, th, td, errorText } from "../lib/theme"
 
 type Vehicle = {
   id: string
@@ -17,6 +17,29 @@ type MaintenanceLog = {
   created_at: string
   closed_at: string | null
   vehicles?: Vehicle
+}
+
+const textarea = {
+  backgroundColor: colors.bg,
+  border: `1px solid ${colors.border}`,
+  borderRadius: '4px',
+  padding: '0.5rem 0.75rem',
+  color: colors.text,
+  fontSize: '0.875rem',
+  outline: 'none',
+  width: '100%',
+  boxSizing: 'border-box' as const,
+  fontFamily: 'inherit',
+  resize: 'vertical' as const,
+  marginBottom: '0.75rem',
+}
+
+const closeButton = {
+  ...button,
+  backgroundColor: '#22c55e',
+  color: '#0f172a',
+  padding: '0.375rem 0.75rem',
+  fontSize: '0.75rem',
 }
 
 export default function Maintenance() {
@@ -45,7 +68,6 @@ export default function Maintenance() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     setError("")
-    console.log("vehicleId is:", vehicleId, "description is:", description)
     if (!vehicleId || !description) {
       setError("Vehicle and description are required")
       return
@@ -64,11 +86,7 @@ export default function Maintenance() {
       return
     }
 
-    // Auto-transition: vehicle goes to in_shop
-    await supabase
-      .from("vehicles")
-      .update({ status: "in_shop" })
-      .eq("id", vehicleId)
+    await supabase.from("vehicles").update({ status: "in_shop" }).eq("id", vehicleId)
 
     setDescription("")
     setVehicleId("")
@@ -84,13 +102,9 @@ export default function Maintenance() {
       .update({ status: "closed", closed_at: new Date().toISOString() })
       .eq("id", log.id)
 
-    // Auto-transition: vehicle back to available, unless retired
     const vehicle = vehicles.find((v) => v.id === log.vehicle_id)
     if (vehicle && vehicle.status !== "retired") {
-      await supabase
-        .from("vehicles")
-        .update({ status: "available" })
-        .eq("id", log.vehicle_id)
+      await supabase.from("vehicles").update({ status: "available" }).eq("id", log.vehicle_id)
     }
 
     await loadData()
@@ -98,66 +112,62 @@ export default function Maintenance() {
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Maintenance</h1>
+    <div style={page}>
+      <h1 style={heading}>Maintenance</h1>
 
-      <form onSubmit={handleCreate} className="border rounded p-4 mb-6 space-y-3">
-        <h2 className="font-semibold">Create Maintenance Log</h2>
-        {error && <p className="text-red-600 text-sm">{error}</p>}
-        <select
-          value={vehicleId}
-          onChange={(e) => setVehicleId(e.target.value)}
-          className="border p-2 w-full"
-        >
-          <option value="">Select vehicle</option>
-          {vehicles
-            .filter((v) => v.status !== "in_shop")
-            .map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.registration_number} — {v.name}
-              </option>
-            ))}
-        </select>
-        <textarea
-          placeholder="Describe the issue"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className="border p-2 w-full"
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          {loading ? "Saving..." : "Create Log"}
-        </button>
-      </form>
+      <div style={card}>
+        <h2 style={{ fontSize: '1rem', fontWeight: 600, color: colors.text, marginBottom: '0.75rem' }}>
+          Create Maintenance Log
+        </h2>
+        <form onSubmit={handleCreate}>
+          {error && <p style={errorText}>{error}</p>}
+          <select
+            value={vehicleId}
+            onChange={(e) => setVehicleId(e.target.value)}
+            style={{ ...selectStyle, width: '100%', marginBottom: '0.75rem' }}
+          >
+            <option value="">Select vehicle</option>
+            {vehicles
+              .filter((v) => v.status !== "in_shop")
+              .map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.registration_number} — {v.name}
+                </option>
+              ))}
+          </select>
+          <textarea
+            placeholder="Describe the issue"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            style={textarea}
+          />
+          <button type="submit" disabled={loading} style={button}>
+            {loading ? "Saving..." : "Create Log"}
+          </button>
+        </form>
+      </div>
 
-      <h2 className="font-semibold mb-2">Logs</h2>
-      <table className="w-full border-collapse">
+      <h2 style={{ fontSize: '1rem', fontWeight: 600, color: colors.text, marginBottom: '0.75rem' }}>Logs</h2>
+      <table style={table}>
         <thead>
-          <tr className="text-left border-b">
-            <th className="p-2">Vehicle</th>
-            <th className="p-2">Description</th>
-            <th className="p-2">Status</th>
-            <th className="p-2">Created</th>
-            <th className="p-2"></th>
+          <tr>
+            <th style={th}>Vehicle</th>
+            <th style={th}>Description</th>
+            <th style={th}>Status</th>
+            <th style={th}>Created</th>
+            <th style={th}></th>
           </tr>
         </thead>
         <tbody>
           {logs.map((log) => (
-            <tr key={log.id} className="border-b">
-              <td className="p-2">{log.vehicles?.registration_number || log.vehicle_id}</td>
-              <td className="p-2">{log.description}</td>
-              <td className="p-2">{log.status}</td>
-              <td className="p-2">{new Date(log.created_at).toLocaleDateString()}</td>
-              <td className="p-2">
+            <tr key={log.id}>
+              <td style={td}>{log.vehicles?.registration_number || log.vehicle_id}</td>
+              <td style={td}>{log.description}</td>
+              <td style={td}>{log.status}</td>
+              <td style={td}>{new Date(log.created_at).toLocaleDateString()}</td>
+              <td style={td}>
                 {log.status === "open" && (
-                  <button
-                    onClick={() => handleClose(log)}
-                    disabled={loading}
-                    className="bg-green-600 text-white px-3 py-1 rounded text-sm"
-                  >
+                  <button onClick={() => handleClose(log)} disabled={loading} style={closeButton}>
                     Close
                   </button>
                 )}
