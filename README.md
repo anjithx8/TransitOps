@@ -1,6 +1,6 @@
 # TransitOps: Smart Transport Operations Platform
 
-A centralized fleet operations platform built end-to-end in a single 5-hour hackathon sprint — vehicle registry, driver management, trip dispatch, maintenance workflows, and cost analytics, all backed by a live Postgres database with enforced business rules, not just CRUD screens.
+A centralized fleet operations platform built end-to-end in a single 8-hour hackathon sprint — vehicle registry, driver management, trip dispatch, maintenance workflows, and cost analytics, all backed by a live Postgres database with enforced business rules, not just CRUD screens.
 
 ---
 
